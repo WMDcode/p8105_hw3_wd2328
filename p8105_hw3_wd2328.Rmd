@@ -8,14 +8,52 @@ output: github_document
 ```{r message=FALSE, warning=FALSE}
 # Loading packages
 library(tidyverse)
+library(viridis)
 ```
 
 # Problem 1
 
 ```{r}
-# Loading in Instacart data-set
+# Loading in Instacart dataset
 library(p8105.datasets)
 data("instacart")
+
+# A quick look at the structure of the dataset
+str(instacart)
+```
+
+The dataset includes `r ncol(instacart)` columns and `r nrow(instacart)` rows, containing information about customer grocery orders placed through the Instacart app. Each row represents a single product within an order and its associated details. Key variables include `order_id`, `product_id`, `add_to_cart_order` (the position of the item in the cart), `reordered` (binary indicator for whether the customer had previously ordered the item), `user_id`, and `eval_set` (always set to “train,” indicating this dataset is likely used for model training). Additional variables describe ordering behavior, such as `order_number` (sequence of the customer’s orders), `order_dow` (day of the week, coded 0–6), `order_hour_of_day` (hour of the day, coded 0–23), and `days_since_prior_order` (days since the customer’s previous order). Product-level information includes `product_name`, `aisle_id`, `department_id`, `aisle`, and `department`.
+
+As a random example:
+```{r}
+t(instacart[123,])
+```
+This example shows us that customer 51011 submitted an order (order ID 226) at about noon (hour 12) on the first day of the week (day 0). This was the customer's 4th order, and 30 days since they ordered previously. The particular product ordered under this observation was organic blueberries (product ID 39275). This was the 9th item added to the cart and the first time the customer had ordered this item. Organic blueberries are found in the "packaged vegetables fruits" aisle (aisle ID 123) in the produce department (department ID 4).
+
+A few insights we can pull from the data:
+```{r}
+# Aisles and number of ordered items
+instacart |>
+  count(aisle, sort = TRUE)
+```
+There are `r length(unique(pull(instacart, aisle)))` aisles, and the top 3 aisles (in terms of ordered items) are "fresh vegetables", "fresh fruits", and "packaged vegetables fruits".
+
+Looking at aisles containing more than 10000 items ordered.
+```{r}
+instacart |>
+  group_by(aisle, department) |>
+  summarise(ordered_items = n(), .groups = "drop") |>
+  filter(ordered_items > 10000) |>
+  mutate(aisle = fct_reorder(aisle, department)) |>
+  ggplot(aes(y = aisle, x = ordered_items, fill = department)) +
+  geom_col() +
+  scale_fill_viridis(name = "department", discrete = TRUE) +
+  scale_y_discrete(limits = rev) +
+  theme_bw() +
+  labs(
+    title = "Products Ordered by Aisle",
+    x = "Ordered products",
+    y = "Aisle")
 ```
 
 
