@@ -55,5 +55,101 @@ instacart |>
     x = "Ordered products",
     y = "Aisle")
 ```
+This visualization highlights the most heavily trafficked aisles across departments. As pointed out earlier, produce is the most commonly ordered from department. This is followed by dairy eggs. It's also interesting to see that the popular snack and beverage aisles are chips and selzer water.
+
+Looking at popular items in specific aisles.
+```{r}
+instacart |>
+  group_by(aisle) |>
+  filter(aisle %in% c("baking ingredients", 
+                    "dog food care", 
+                    "packaged vegetables fruits")) |>
+  count(product_name, sort = TRUE, name = "num_ordered") |>
+  slice(1:3)
+```
+From this quick table, the most popular items of the aisles "baking ingredients", "dog food care", and "packaged vegetables fruits", are light brown sugar, chicken & rice dog snack sticks, and organic baby spinach, respectively.
+
+Looking at when pink lady apples and coffee ice cream are usually ordered on each day of the week.
+```{r}
+instacart |>
+  filter(product_name %in% c("Pink Lady Apple",
+                           "Coffee Ice Cream")) |>
+  group_by(product_name, order_dow) |>
+  summarise(mean_hour = mean(order_hour_of_day), .groups = "drop") |>
+  mutate(
+    hour = floor(mean_hour),
+    minute = round((mean_hour - hour) * 60),
+    clock_time = sprintf("%02d:%02d", hour, minute),
+    day_of_week = order_dow + 1,
+    day_of_week = wday(day_of_week, label = TRUE),
+    combined_time = paste(day_of_week, clock_time)) |>
+  select(product_name, day_of_week, combined_time) |>
+  pivot_wider(names_from = product_name,
+              values_from = combined_time) |>
+  select(-day_of_week) |>
+  knitr::kable()
+```
+On average, pink lady apples and coffee ice cream are ordered during the afternoon hours most days of the week. The exception is for pink lady apples, which, on average, are ordered in the mornings on Wednesdays and Thursdays.
+
+# Problem 2
+
+`Zip Codes.csv` data-frame
+```{r message=FALSE}
+zipcodes_df = read_csv("data/Zip Codes.csv", na = "NA") |>
+  janitor::clean_names() |>
+  select(-c(state_fips, county_code, file_date))
+```
+
+`Zip_zori_uc_sfrcondomfr_sm_month_NYC.csv` data-frame
+```{r message=FALSE}
+zillow_df = read_csv("data/Zip_zori_uc_sfrcondomfr_sm_month_NYC.csv", na = "NA") |>
+  janitor::clean_names() |>
+  pivot_longer(
+    cols = x2015_01_31:x2024_08_31,
+    names_to = "date",
+    values_to = "zillow_observed_rent_index") |>
+  select(-c(region_type, state_name, metro)) |>
+  rename(zip_code = region_name,
+         county = county_name) |>
+  mutate(
+    date = ymd(str_remove(date, "x")),
+    county = str_remove(county, " County"))
+```
+
+Joining datasets
+```{r}
+problem2_df = full_join(zillow_df, zipcodes_df, by = c("county", "zip_code")) |>
+  select(
+    c(date,
+      city,
+      state,
+      zip_code,
+      county,
+      county_fips,
+      neighborhood,
+      region_id,
+      size_rank,
+      zillow_observed_rent_index))
+```
+
+How many zip codes are observed every month in the dataset (all 116 months 2015-2024)?
+```{r}
+problem2_df |>
+  filter(!is.na(zillow_observed_rent_index)) |>
+  count(zip_code, sort = TRUE) |>
+  filter(n == 116) |>
+  nrow()
+```
+There are 48 ZIP codes observed all 116 months.
+
+How many zip codes are observed fewer than 10 times out of the 116 possible observations?
+```{r}
+problem2_df |>
+  count(zip_code, sort = TRUE) |>
+  filter(n < 10) |>
+  nrow()
+```
+There were 171 ZIP codes in the dataset which were observed fewer than 10 times.
+
 
 
